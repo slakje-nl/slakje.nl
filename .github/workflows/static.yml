@@ -1,26 +1,40 @@
-name: Deploy static content to Pages
+name: Bump version for static assets and deploy static content to Pages
 
 on:
-  workflow_run:
-    workflows: [Bump static files version]
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
-  group: "pages"
+  group: "deployment"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  bump_static_files:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          export PREVIOUS_VERSION="`echo .version`"
+          export NEW_VERSION="`git rev-parse --short HEAD`"
+          
+          find . -type f -exec sed -i "s/_slakje_version=${PREVIOUS_VERSION}/_slakje_version={NEW_VERSION}/g" {} +
+          
+          echo $NEW_VERSION > .version
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "[skip ci] bump static files version"
+          git push
   deploy:
+    needs: bump_static_files
     environment:
       name: github-pages
       url: https://slakje.nl
