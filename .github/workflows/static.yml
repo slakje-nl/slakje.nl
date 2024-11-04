@@ -27,7 +27,7 @@ jobs:
           export PREVIOUS_VERSION="`cat .version`"
           export NEW_VERSION="`git rev-parse --short HEAD`"
           
-          find . -type f -exec sed -i "s/_slakje_version=${PREVIOUS_VERSION}/_slakje_version=${NEW_VERSION}/g" {} +
+          find ./static/ -type f -exec sed -i "s/_slakje_version=${PREVIOUS_VERSION}/_slakje_version=${NEW_VERSION}/g" {} +
           
           echo -n $NEW_VERSION > .version
       - id: push
@@ -56,7 +56,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: 'static'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
