@@ -15,32 +15,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  bump_static_files_version:
+  bump-static-files-version:
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.push.outputs.commit_sha }}
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - id: bump_version
+        run: |
           export PREVIOUS_VERSION="`cat .version`"
           export NEW_VERSION="`git rev-parse --short HEAD`"
           
           find . -type f -exec sed -i "s/_slakje_version=${PREVIOUS_VERSION}/_slakje_version={NEW_VERSION}/g" {} +
           
           echo $NEW_VERSION > .version
-          
+      - id: push
+        run:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "[skip ci] bump static files version"
           git push
+          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   deployment:
-    needs: bump_static_files_version
+    needs: bump-static-files-version
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: https://slakje.nl
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout latest code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump-static-files-version.outputs.commit_sha }}
+          fetch-depth: 0
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
